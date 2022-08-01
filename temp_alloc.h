@@ -220,7 +220,8 @@ void temp_track_allocation_info(bool track_status)
 
 void* temp_alloc(size_t size_to_alloc)
 {
-    const size_t size = (size_to_alloc + ALIGMENT_BYTES-1) & ~ALIGMENT_BYTES-1;
+    //const size_t size = (size_to_alloc + ALIGMENT_BYTES - 1) & ~ALIGMENT_BYTES - 1;
+    const size_t size = size_to_alloc + (ALIGMENT_BYTES - (size_to_alloc % ALIGMENT_BYTES));
 
     if (g_temp_storage.track_allocation_info)
     {
@@ -243,10 +244,8 @@ void* temp_alloc(size_t size_to_alloc)
     void* result = g_temp_storage.at;
     assert(result != NULL);
 
-    char* data = (char*)g_temp_storage.at;
-    data += size;
+    g_temp_storage.at = (char*)g_temp_storage.at + size;
 
-    g_temp_storage.at = data;
     g_temp_storage.current_size += size;
     return result;
 }
@@ -258,11 +257,13 @@ char* temp_printf(const char* format, ...)
     size_t buffer_size = vsnprintf(NULL, 0, format, args);
     va_end(args);
 
-    char* buf = (char*)temp_alloc(buffer_size + 1);
+    char* buf = (char*)temp_alloc(buffer_size);
 
     va_start(args, format);
-    vsnprintf(buf, buffer_size + 1, format, args);
+    vsnprintf(buf, buffer_size+1, format, args);
     va_end(args);
+
+    buf[buffer_size] = 0;
     return buf;
 }
 
@@ -270,7 +271,8 @@ char* temp_copy_string(const char* c_string)
 {
     const size_t c_string_size = strlen(c_string);
     char* new_string = (char*)temp_alloc(c_string_size + 1);
-    new_string = (char*)memcpy(new_string, c_string, c_string_size + 1);
+    new_string = (char*)memcpy(new_string, c_string, c_string_size);
+    new_string[c_string_size] = 0;
     return new_string;
 }
 
@@ -278,6 +280,7 @@ char* temp_copy_string_size(const char* c_string, size_t size)
 {
     char* new_string = (char*)temp_alloc(size + 1);
     new_string = (char*)memcpy(new_string, c_string, size + 1);
+    new_string[size] = 0;
     return new_string;
 }
 
